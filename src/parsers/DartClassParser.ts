@@ -27,18 +27,19 @@ export class DartClassParser {
     parseDartFile(content: string): DartClassInfo[] {
         const classes: DartClassInfo[] = [];
         const imports = this.extractImports(content);
-        
+
         // Find all classes with @JsonSerializable annotation
         // Support inheritance syntax: class ClassName extends SuperClass {
-        const classPattern = /@JsonSerializable\(\)\s*class\s+(\w+)(?:\s+extends\s+\w+)?\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/gs;
+        // Allow comments and empty lines between annotation and class declaration
+        const classPattern = /@JsonSerializable\(\)[\s\S]*?class\s+(\w+)(?:\s+extends\s+\w+)?\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/gs;
         let match;
-        
+
         while ((match = classPattern.exec(content)) !== null) {
             const className = match[1];
             const classBody = match[2];
-            
+
             const properties = this.extractProperties(classBody);
-            
+
             classes.push({
                 className,
                 properties,
@@ -46,10 +47,10 @@ export class DartClassParser {
                 imports // Add imports to each class
             });
         }
-        
+
         return classes;
     }
-    
+
     /**
      * Extract import statements from Dart file content
      */
@@ -57,7 +58,7 @@ export class DartClassParser {
         const imports: string[] = [];
         const importPattern = /import\s+['"]([^'"]+)['"]\s*(?:show\s+[^;]+|hide\s+[^;]+|as\s+\w+)?;/g;
         let match;
-        
+
         while ((match = importPattern.exec(content)) !== null) {
             const importPath = match[1];
             // Skip Dart SDK imports and generated files
@@ -65,10 +66,10 @@ export class DartClassParser {
                 imports.push(match[0]); // Store the full import statement
             }
         }
-        
+
         return imports;
     }
-    
+
     /**
      * Extract properties from class body
      */
@@ -85,7 +86,7 @@ export class DartClassParser {
             if (!line || line.startsWith('//') || line.includes('{') || line.includes('}')) {
                 continue;
             }
-            
+
             // Skip regular methods (but not getters)
             if (line.includes('(') && !line.includes(' get ')) {
                 continue;
@@ -96,37 +97,37 @@ export class DartClassParser {
             const jsonFieldMatch = line.match(/@JSONField\(([^)]*)\)/);
             if (jsonFieldMatch) {
                 const params = jsonFieldMatch[1];
-                
+
                 // Extract name parameter
                 const nameMatch = params.match(/name:\s*['"']([^'"]*)['"']/);
                 if (nameMatch) {
                     jsonFieldInfo.name = nameMatch[1];
                 }
-                
+
                 // Extract serialize parameter
                 const serializeMatch = params.match(/\bserialize:\s*(true|false)/);
                 if (serializeMatch) {
                     jsonFieldInfo.serialize = serializeMatch[1] === 'true';
                 }
-                
+
                 // Extract deserialize parameter
                 const deserializeMatch = params.match(/\bdeserialize:\s*(true|false)/);
                 if (deserializeMatch) {
                     jsonFieldInfo.deserialize = deserializeMatch[1] === 'true';
                 }
-                
+
                 // Extract isEnum parameter
                 const isEnumMatch = params.match(/\bisEnum:\s*(true|false)/);
                 if (isEnumMatch) {
                     jsonFieldInfo.isEnum = isEnumMatch[1] === 'true';
                 }
-                
+
                 // Extract copyWith parameter
                 const copyWithMatch = params.match(/\bcopyWith:\s*(true|false)/);
                 if (copyWithMatch) {
                     jsonFieldInfo.copyWith = copyWithMatch[1] === 'true';
                 }
-                
+
                 // If annotation is on same line, extract the property from the rest
                 const restOfLine = line.replace(/@JSONField\([^)]*\)\s*/, '');
                 if (restOfLine.trim()) {
@@ -144,31 +145,31 @@ export class DartClassParser {
                 const prevJsonFieldMatch = prevLine.match(/@JSONField\(([^)]*)\)/);
                 if (prevJsonFieldMatch) {
                     const params = prevJsonFieldMatch[1];
-                    
+
                     // Extract name parameter
                     const nameMatch = params.match(/name:\s*['"']([^'"]*)['"']/);
                     if (nameMatch) {
                         jsonFieldInfo.name = nameMatch[1];
                     }
-                    
+
                     // Extract serialize parameter
                     const serializeMatch = params.match(/\bserialize:\s*(true|false)/);
                     if (serializeMatch) {
                         jsonFieldInfo.serialize = serializeMatch[1] === 'true';
                     }
-                    
+
                     // Extract deserialize parameter
                     const deserializeMatch = params.match(/\bdeserialize:\s*(true|false)/);
                     if (deserializeMatch) {
                         jsonFieldInfo.deserialize = deserializeMatch[1] === 'true';
                     }
-                    
+
                     // Extract isEnum parameter
                     const isEnumMatch = params.match(/\bisEnum:\s*(true|false)/);
                     if (isEnumMatch) {
                         jsonFieldInfo.isEnum = isEnumMatch[1] === 'true';
                     }
-                    
+
                     // Extract copyWith parameter
                     const copyWithMatch = params.match(/\bcopyWith:\s*(true|false)/);
                     if (copyWithMatch) {
@@ -201,7 +202,7 @@ export class DartClassParser {
         if (getterMatch) {
             const type = getterMatch[1].trim();
             const name = getterMatch[2];
-            
+
             return {
                 name,
                 type: type.replace('?', '').trim(),
@@ -215,7 +216,7 @@ export class DartClassParser {
                 copyWith: jsonFieldInfo?.copyWith
             };
         }
-        
+
         // Match property pattern: Type name [= defaultValue];
         const propertyMatch = cleanLine.match(/^([\w<>,\s]+\??)\s+(\w+)(?:\s*=\s*[^;]+)?;?$/);
 
@@ -248,7 +249,7 @@ export class DartClassParser {
             copyWith: jsonFieldInfo?.copyWith
         };
     }
-    
+
     /**
      * Convert DartClassInfo to JsonClass for code generation
      */
@@ -301,7 +302,7 @@ export class DartClassParser {
             nestedClasses: [] // For now, we'll handle nested classes separately
         };
     }
-    
+
     /**
      * Map Dart types to JSON types for code generation
      */
@@ -317,31 +318,31 @@ export class DartClassParser {
             'Map': 'Map',
             'dynamic': 'dynamic'
         };
-        
+
         // Handle generic types like List<String>, Map<String, dynamic>
         if (dartType.includes('<')) {
             const baseType = dartType.split('<')[0];
             return typeMap[baseType] || dartType;
         }
-        
+
         return typeMap[dartType] || dartType;
     }
-    
+
     /**
      * Extract all class names from a Dart file
      */
     extractClassNames(content: string): string[] {
         const classNames: string[] = [];
-        const classPattern = /@JsonSerializable\(\)\s*class\s+(\w+)(?:\s+extends\s+\w+)?/g;
+        const classPattern = /@JsonSerializable\(\)[\s\S]*?class\s+(\w+)(?:\s+extends\s+\w+)?/g;
         let match;
-        
+
         while ((match = classPattern.exec(content)) !== null) {
             classNames.push(match[1]);
         }
-        
+
         return classNames;
     }
-    
+
     /**
      * Check if a Dart file contains @JsonSerializable classes
      */

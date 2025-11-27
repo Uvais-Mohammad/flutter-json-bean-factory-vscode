@@ -63,8 +63,8 @@ export class FileScanner {
      * 递归扫描目录中的entity文件
      */
     private async scanDirectoryForModels(
-        dirPath: string, 
-        existingModels: ExistingModelInfo[], 
+        dirPath: string,
+        existingModels: ExistingModelInfo[],
         projectRoot: string
     ): Promise<void> {
         try {
@@ -86,8 +86,8 @@ export class FileScanner {
                 if (fileStat.isDirectory()) {
                     // 递归扫描子目录
                     await this.scanDirectoryForModels(filePath, existingModels, projectRoot);
-                } else if (file.endsWith('.dart')) {
-                    // 检查Dart文件
+                } else if (file.endsWith('.dart') && !file.endsWith('.g.dart') && !file.endsWith('.freezed.dart')) {
+                    // Check Dart file (exclude generated files)
                     await this.scanDartFileForModels(filePath, existingModels, projectRoot);
                 }
             }
@@ -100,8 +100,8 @@ export class FileScanner {
      * 扫描单个Dart文件中的entity类
      */
     private async scanDartFileForModels(
-        filePath: string, 
-        existingModels: ExistingModelInfo[], 
+        filePath: string,
+        existingModels: ExistingModelInfo[],
         projectRoot: string
     ): Promise<void> {
         try {
@@ -158,8 +158,8 @@ export class FileScanner {
      * Recursively scan directory for entity files
      */
     private async scanDirectoryForEntityFiles(
-        dirPath: string, 
-        entityFiles: EntityFileInfo[], 
+        dirPath: string,
+        entityFiles: EntityFileInfo[],
         projectRoot: string,
         packageName: string
     ): Promise<void> {
@@ -175,8 +175,8 @@ export class FileScanner {
                     if (!file.includes('generated') && !file.includes('.dart_tool')) {
                         await this.scanDirectoryForEntityFiles(filePath, entityFiles, projectRoot, packageName);
                     }
-                } else if (file.endsWith('.dart') && !file.endsWith('.g.dart')) {
-                    // Check if this dart file contains @JsonSerializable classes
+                } else if (file.endsWith('.dart') && !file.endsWith('.g.dart') && !file.endsWith('.freezed.dart')) {
+                    // Check if this dart file contains @JsonSerializable classes (exclude generated files)
                     const content = fs.readFileSync(filePath, 'utf8');
 
                     if (this.dartClassParser.hasJsonSerializableClasses(content)) {
@@ -205,8 +205,8 @@ export class FileScanner {
      * 合并新生成的classes和已存在的models
      */
     mergeWithExistingModels(
-        newClasses: JsonClass[], 
-        existingModels: ExistingModelInfo[], 
+        newClasses: JsonClass[],
+        existingModels: ExistingModelInfo[],
         config: GeneratorConfig
     ): JsonClass[] {
         const allClasses = [...newClasses];
@@ -230,7 +230,7 @@ export class FileScanner {
                     baseName = baseName.substring(0, baseName.length - config.classNameSuffix.length);
                 }
 
-                const existingClass: JsonClass & {filePath?: string} = {
+                const existingClass: JsonClass & { filePath?: string } = {
                     name: baseName,
                     properties: [],
                     nestedClasses: [],
@@ -284,8 +284,8 @@ export class FileScanner {
                             return result;
                         }
                     }
-                } else if (file.endsWith('.dart') && !file.endsWith('.g.dart')) {
-                    // Check if this dart file contains the type
+                } else if (file.endsWith('.dart') && !file.endsWith('.g.dart') && !file.endsWith('.freezed.dart')) {
+                    // Check if this dart file contains the type (exclude generated files)
                     const content = fs.readFileSync(filePath, 'utf8');
 
                     if (this.dartClassParser.hasJsonSerializableClasses(content)) {
