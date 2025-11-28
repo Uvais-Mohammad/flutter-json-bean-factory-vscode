@@ -200,8 +200,11 @@ export class DartClassParser {
         // Check if this is a getter
         const getterMatch = cleanLine.match(/^([\w<>,\s]+\??\s*)\s+get\s+(\w+)\s*=>/);
         if (getterMatch) {
-            const type = getterMatch[1].trim();
+            let type = getterMatch[1].trim();
             const name = getterMatch[2];
+
+            // Remove final and const keywords from type
+            type = type.replace(/^final\s+/, '').replace(/^const\s+/, '').trim();
 
             return {
                 name,
@@ -224,13 +227,16 @@ export class DartClassParser {
             return null;
         }
 
-        const type = propertyMatch[1].trim();
+        let type = propertyMatch[1].trim();
         const name = propertyMatch[2];
 
         // Skip if this looks like a method or constructor
         if (name.includes('(') || type.includes('(')) {
             return null;
         }
+
+        // Remove final and const keywords from type
+        type = type.replace(/^final\s+/, '').replace(/^const\s+/, '').trim();
 
         // Determine if nullable
         const isNullable = type.endsWith('?');
