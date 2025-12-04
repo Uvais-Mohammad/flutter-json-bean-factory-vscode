@@ -466,7 +466,7 @@ export 'package:${this.packageName}/generated/json/${snakeClassName}.g.dart';`;
     parts.push('');
 
     // Generate constructor with named optional parameters
-    parts.push(`  ${className}({`);
+    parts.push(`  const ${className}({`);
     for (const prop of properties) {
       const fieldName = prop.name;
       const defaultValue = this.getDefaultValue(prop);
