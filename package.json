@@ -191,6 +191,11 @@
           "type": "string",
           "default": "[]",
           "description": "Default value for List fields"
+        },
+        "flutter-json-bean-factory.generateList": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate a list class wrapper for the entity"
         }
       }
     }

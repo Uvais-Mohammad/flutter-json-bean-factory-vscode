@@ -38,7 +38,38 @@ export class JsonParser {
 
         try {
             const jsonObject = JSON.parse(jsonString);
-            return this.parseObject(jsonObject, className);
+            const rootClass = this.parseObject(jsonObject, className);
+
+            // Check if we need to generate a list wrapper
+            if (this.config.generateList) {
+                const listClassName = `${className}List`;
+
+                // Create the property for the list
+                const listProperty: JsonProperty = {
+                    name: 'list',
+                    originalJsonKey: 'list',
+                    type: 'array',
+                    dartType: `List<${className}>`,
+                    isNullable: false,
+                    isArray: true,
+                    isNestedObject: true,
+                    nestedClass: rootClass,
+                    arrayElementType: className,
+                    originalValue: [],
+                    isNullableForToJson: false
+                };
+
+                // Create the wrapper class
+                const wrapperClass: JsonClass = {
+                    name: listClassName,
+                    properties: [listProperty],
+                    nestedClasses: [rootClass]
+                };
+
+                return wrapperClass;
+            }
+
+            return rootClass;
         } catch (error) {
             throw new Error(`Invalid JSON: ${error}`);
         }
@@ -52,9 +83,9 @@ export class JsonParser {
             JSON.parse(jsonString);
             return { isValid: true };
         } catch (error) {
-            return { 
-                isValid: false, 
-                error: error instanceof Error ? error.message : 'Unknown error' 
+            return {
+                isValid: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
             };
         }
     }
@@ -82,7 +113,7 @@ export class JsonParser {
     private parseProperty(key: string, value: any, parentClassName: string): JsonProperty {
         const propertyName = this.toCamelCase(key);
         const type = this.getValueType(value);
-        
+
         let dartType = this.mapToDartType(type, value);
         let isNullable = value === null;
         let isArray = Array.isArray(value);
@@ -98,7 +129,7 @@ export class JsonParser {
         if (isArray && value.length > 0) {
             const firstElement = value[0];
             const elementType = this.getValueType(firstElement);
-            
+
             if (elementType === 'object') {
                 const nestedClassName = `${parentClassName}${this.toPascalCase(key)}Item`;
                 nestedClass = this.parseObject(firstElement, nestedClassName);
@@ -166,12 +197,12 @@ export class JsonParser {
 
     private toCamelCase(str: string): string {
         return str.replace(/[-_](.)/g, (_, char) => char.toUpperCase())
-                  .replace(/^[A-Z]/, char => char.toLowerCase());
+            .replace(/^[A-Z]/, char => char.toLowerCase());
     }
 
     private toPascalCase(str: string): string {
         return str.replace(/[-_](.)/g, (_, char) => char.toUpperCase())
-                  .replace(/^[a-z]/, char => char.toUpperCase());
+            .replace(/^[a-z]/, char => char.toUpperCase());
     }
 
     /**
@@ -179,7 +210,7 @@ export class JsonParser {
      */
     getAllClasses(rootClass: JsonClass): JsonClass[] {
         const classes: JsonClass[] = [rootClass];
-        
+
         const collectNestedClasses = (cls: JsonClass) => {
             for (const nestedClass of cls.nestedClasses) {
                 classes.push(nestedClass);

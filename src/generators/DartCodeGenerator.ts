@@ -377,21 +377,23 @@ export 'package:${this.packageName}/generated/json/${snakeClassName}.g.dart';`;
   private collectAllClasses(jsonClass: JsonClass): JsonClass[] {
     const allClasses: JsonClass[] = [jsonClass];
     const visited = new Set<string>();
+    visited.add(jsonClass.name);
 
     const collectNested = (cls: JsonClass) => {
-      if (visited.has(cls.name)) return;
-      visited.add(cls.name);
-
       for (const prop of cls.properties) {
-        if (prop.nestedClass) {
+        if (prop.nestedClass && !visited.has(prop.nestedClass.name)) {
+          visited.add(prop.nestedClass.name);
           allClasses.push(prop.nestedClass);
           collectNested(prop.nestedClass);
         }
       }
 
       for (const nestedClass of cls.nestedClasses) {
-        allClasses.push(nestedClass);
-        collectNested(nestedClass);
+        if (!visited.has(nestedClass.name)) {
+          visited.add(nestedClass.name);
+          allClasses.push(nestedClass);
+          collectNested(nestedClass);
+        }
       }
     };
 
@@ -470,7 +472,8 @@ export 'package:${this.packageName}/generated/json/${snakeClassName}.g.dart';`;
     for (const prop of properties) {
       const fieldName = prop.name;
       const defaultValue = this.getDefaultValue(prop);
-      const correctedDefaultValue = prop.isArray ? '[]' : defaultValue;
+      // Use defaultValue directly as it handles arrays correctly now (including const [])
+      const correctedDefaultValue = defaultValue;
 
       // Determine if we need 'required' or default value
       // Since user asked for "this.amount = 0", we assume optional with default
@@ -509,7 +512,12 @@ export 'package:${this.packageName}/generated/json/${snakeClassName}.g.dart';`;
     const customConfig = this.config as any;
 
     if (prop.isArray) {
-      return customConfig.listDefaultValue || '[]';
+      const listDefault = customConfig.listDefaultValue || '[]';
+      // If default is [], make it const [] for const constructor
+      if (listDefault === '[]') {
+        return 'const []';
+      }
+      return listDefault;
     }
 
     switch (prop.dartType) {
@@ -525,7 +533,8 @@ export 'package:${this.packageName}/generated/json/${snakeClassName}.g.dart';`;
         if (prop.isNestedObject) {
           // 为嵌套对象添加Entity后缀
           const entityClassName = prop.dartType + this.config.classNameSuffix;
-          return `${entityClassName}()`;
+          // Use const constructor for nested objects
+          return `const ${entityClassName}()`;
         }
         return 'null';
     }
@@ -594,7 +603,8 @@ export 'package:${this.packageName}/generated/json/${snakeClassName}.g.dart';`;
       const fieldName = prop.name;
       const varName = this.toCamelCase(prop.originalJsonKey);
       const defaultValue = this.getDefaultValue(prop);
-      const correctedDefaultValue = prop.isArray ? '[]' : defaultValue;
+      // Use defaultValue directly as it handles arrays correctly now (including const [])
+      const correctedDefaultValue = defaultValue;
 
       // Use null coalescing operator to provide default value if null
       // For dynamic types, we might not want to force a default if it can be null, 

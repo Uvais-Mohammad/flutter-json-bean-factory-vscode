@@ -7,6 +7,7 @@ export interface JsonInputSettings {
     intDefaultValue?: string;
     boolDefaultValue?: string;
     listDefaultValue?: string;
+    generateList?: boolean;
 }
 
 export interface JsonInputResult {
@@ -35,7 +36,7 @@ export class JsonInputDialog {
     public async show(): Promise<JsonInputResult | undefined> {
         return new Promise((resolve) => {
             this.panel.webview.html = this.getWebviewContent();
-            
+
             // Handle messages from webview
             this.panel.webview.onDidReceiveMessage(
                 message => {
@@ -80,7 +81,8 @@ export class JsonInputDialog {
             stringDefaultValue: config.get('stringDefaultValue', "''"),
             intDefaultValue: config.get('intDefaultValue', '0'),
             boolDefaultValue: config.get('boolDefaultValue', 'false'),
-            listDefaultValue: config.get('listDefaultValue', '[]')
+            listDefaultValue: config.get('listDefaultValue', '[]'),
+            generateList: config.get('generateList', false)
         };
     }
 
@@ -92,6 +94,7 @@ export class JsonInputDialog {
         config.update('intDefaultValue', settings.intDefaultValue, vscode.ConfigurationTarget.Global);
         config.update('boolDefaultValue', settings.boolDefaultValue, vscode.ConfigurationTarget.Global);
         config.update('listDefaultValue', settings.listDefaultValue, vscode.ConfigurationTarget.Global);
+        config.update('generateList', settings.generateList, vscode.ConfigurationTarget.Global);
     }
 
     private handleFormatJSON(jsonString: string): void {
@@ -266,6 +269,10 @@ export class JsonInputDialog {
                     <input type="checkbox" id="defaultValueCheckbox" ${this.settings.setDefault ? 'checked' : ''} />
                     default value
                 </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="listCheckbox" ${this.settings.generateList ? 'checked' : ''} />
+                    list
+                </label>
             </div>
             <button class="format-button" onclick="formatJSON()">Format</button>
         </div>
@@ -317,6 +324,14 @@ export class JsonInputDialog {
             vscode.postMessage({
                 command: 'settingsChanged',
                 settings: { isOpenNullable: this.checked }
+            });
+        });
+
+        // Handle list checkbox
+        document.getElementById('listCheckbox').addEventListener('change', function() {
+            vscode.postMessage({
+                command: 'settingsChanged',
+                settings: { generateList: this.checked }
             });
         });
         
@@ -371,6 +386,7 @@ export class JsonInputDialog {
             const settings = {
                 isOpenNullable: document.getElementById('nullableCheckbox').checked,
                 setDefault: document.getElementById('defaultValueCheckbox').checked,
+                generateList: document.getElementById('listCheckbox').checked,
                 stringDefaultValue: document.getElementById('stringDefault').value,
                 intDefaultValue: document.getElementById('intDefault').value,
                 boolDefaultValue: document.getElementById('boolDefault').value,
